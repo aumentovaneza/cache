@@ -5,7 +5,7 @@ class Cache
 {
     public function saveCache()
     {
-        $timeout = 10000;
+        $timeout = 600000;
 
         $url = $_SERVER['API_ENDPOINT'];
         $name = explode('/', $url);
@@ -23,13 +23,6 @@ class Cache
         }
 
         ob_start();
-
-        if(file_exists($cache)){
-            $cached = fopen($cache,'w');
-            fwrite($cached, ob_get_contents());
-            fclose($cached);
-            ob_end_flush();
-        }
-
     }
+
 }
