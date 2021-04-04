@@ -1,30 +1,60 @@
 <?php
 
-
+/**
+ * This assumes that there is a model class CacheData where it has the following columns:
+ * id(Integer, unique, increments) , user_id(Integer, unique), json_data(String), time(Integer), endpoint(String).
+ * This also assumes that this uses Laravel as framework
+ * Class Cache
+ */
 class Cache
 {
-    public function saveCache()
+    /**
+     * This function saves the cache data
+     * @param Request $request
+     * @return mixed
+     */
+    public function saveCache(Request $request)
     {
-        // Declare
-        $timeout = 600000;
-        $url = $_SERVER['API_ENDPOINT'];
-        $name = explode('/', $url);
-        $file = $name[count($name) -1];
-        $cache = 'cachefile-'.substr_replace($file,"",-4).'.html';
+        $newCache               = new CacheData();
+        $newCache->user_id      = $request->user_id;
+        $newCache->endpoint     = $request->endpoint;
+        $newCache->json_data    = json_encode($request->json_data);
+        $newCache->time         = $request->time ? $request->time : 60000;
+        $newCache->save();
 
-        //check if there is a set cache time, if not use default
-        if(!empty($_REQUEST['CACHE_TIME'])){
-            $timeout = $_REQUEST['CACHE_TIME'];
-        }
-
-        //Execute
-        if(file_exists($cache) && time() - $timeout < filemtime($cache)){
-            echo "<!-- Cache generated for endpoint".date('H:i', filemtime($cache))." -->\n";
-            readfile($cache);
-            exit;
-        }
-
-        ob_start();
+        return response()->json($newCache);
     }
+
+    /**
+     * This function is to retrieve cached data for a user
+     * @param $user_id
+     * @return mixed
+     */
+    public function retrieveCache($user_id)
+    {
+        $hasCache = CacheData::where('user_id', $user_id)->get();
+
+        if(empty($hasCache)){
+            return response()->json(['code' => 404, 'message' => 'No cache data for user']);
+        }
+
+        return response()->json($hasCache);
+    }
+
+    /**
+     * This function is called from a cronjob to run every second to check and delete cache data.
+     */
+    public function maintainCacheData()
+    {
+        $cacheData = CacheData::all();
+
+        foreach($cacheData as $data){
+            usleep($data->time);
+            $data->delete();
+        }
+    }
+
+
+
 
 }
